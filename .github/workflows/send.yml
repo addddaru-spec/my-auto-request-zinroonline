@@ -64,7 +64,7 @@ jobs:
 
           # 5. リクエストの送信
           FINAL_URL="https://zinro.net/m/room_in.php?mode=submit&player_name=${ENC_PLAYER}&room_name=${ENC_ROOM}&pass=${ENC_PASS}&rom=${ENC_ROM}&speed=1"
-          COOKIE="session_key=1"
+          COOKIE="session_key=2"
 
           echo "Requesting: $FINAL_URL"
  
