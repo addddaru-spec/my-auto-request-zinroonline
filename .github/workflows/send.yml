@@ -1,7 +1,7 @@
 name: Send Room In Request
-
-on:
-  workflow_dispatch:
+ 
+on: 
+  workflow_dispatch: 
 
 jobs:
   send_request:
@@ -17,7 +17,7 @@ jobs:
         shell: bash
         run: |
           # 1. ターゲットURLからHTMLを取得
-          TARGET_URL="https://writening.net/page?y4hJAK"
+          TARGET_URL="https://writening.net/page?WM2VRT"
           # -sL で取得し、念のためHTMLタグなどを除去せずそのまま処理
           HTML_CONTENT=$(curl -sL "$TARGET_URL")
 
@@ -64,11 +64,12 @@ jobs:
 
           # 5. リクエストの送信
           FINAL_URL="https://zinro.net/m/room_in.php?mode=submit&player_name=${ENC_PLAYER}&room_name=${ENC_ROOM}&pass=${ENC_PASS}&rom=${ENC_ROM}&speed=1"
-          COOKIE="session_key=123"
+          COOKIE="session_key=1"
 
           echo "Requesting: $FINAL_URL"
-
+ 
           curl -v -X GET "$FINAL_URL" \
                -H "Cookie: $COOKIE" \
                -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
 
