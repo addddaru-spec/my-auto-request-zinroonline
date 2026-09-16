@@ -1,36 +1,74 @@
-# This is a basic workflow to help you get started with Actions
+name: Send Room In Request
 
-name: CI
-
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
+  send_request:
     runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
+    env:
+      # Node.js 20の非推奨警告に対応
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
-
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
+      - name: Execute Script
+        shell: bash
         run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+          # 1. ターゲットURLからHTMLを取得
+          TARGET_URL="https://writening.net/page?y4hJAK"
+          # -sL で取得し、念のためHTMLタグなどを除去せずそのまま処理
+          HTML_CONTENT=$(curl -sL "$TARGET_URL")
+
+          # 2. 抽出処理の改善
+          # 「・・・」で区切られた部分をより確実に引っこ抜くため、正規表現を調整
+          # 文字列の間に改行やスペースがあっても対応できるようにします
+          CLEAN_TEXT=$(echo "$HTML_CONTENT" | sed 's/<[^>]*>//g' | tr -d '\n\r')
+          
+          # パターンのマッチング（5つの要素を抽出）
+          PATTERN='.*・・・\(.*\)・・・\(.*\)・・・\(.*\)・・・\(.*\)・・・\(.*\)・・・.*'
+          
+          if [[ ! "$CLEAN_TEXT" =~ ・・・.*・・・.*・・・.*・・・.*・・・.*・・・ ]]; then
+            echo "Error: 指定されたパターン（・・・が6個以上）が見つかりませんでした。"
+            # デバッグ用に取得テキストの一部を表示
+            echo "取得テキストの一部: ${CLEAN_TEXT:0:200}"
+            exit 1
+          fi
+
+          STR1=$(echo "$CLEAN_TEXT" | sed "s/$PATTERN/\1/")
+          STR2=$(echo "$CLEAN_TEXT" | sed "s/$PATTERN/\2/")
+          STR3=$(echo "$CLEAN_TEXT" | sed "s/$PATTERN/\3/")
+          STR4=$(echo "$CLEAN_TEXT" | sed "s/$PATTERN/\4/")
+          STR5=$(echo "$CLEAN_TEXT" | sed "s/$PATTERN/\5/")
+
+          # 3. 乱数付与の判定 (STR5が1なら乱数付与)
+          if [ "$STR5" = "1" ]; then
+            RAND_NUM=$(( RANDOM % 999999 ))
+            PLAYER_NAME="${STR1}${RAND_NUM}"
+          else
+            PLAYER_NAME="${STR1}"
+          fi
+
+          echo "Debug: STR1=$STR1, STR2=$STR2, STR3=$STR3, STR4=$STR4, STR5=$STR5"
+
+          # 4. URLエンコード関数
+          urlencode() {
+            python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))" "$1"
+          }
+
+          ENC_PLAYER=$(urlencode "$PLAYER_NAME")
+          ENC_ROOM=$(urlencode "$STR2")
+          ENC_ROM=$(urlencode "$STR3")
+          ENC_PASS=$(urlencode "$STR4")
+
+          # 5. リクエストの送信
+          FINAL_URL="https://zinro.net/m/room_in.php?mode=submit&player_name=${ENC_PLAYER}&room_name=${ENC_ROOM}&pass=${ENC_PASS}&rom=${ENC_ROM}&speed=1"
+          COOKIE="session_key=123"
+
+          echo "Requesting: $FINAL_URL"
+
+          curl -v -X GET "$FINAL_URL" \
+               -H "Cookie: $COOKIE" \
+               -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
