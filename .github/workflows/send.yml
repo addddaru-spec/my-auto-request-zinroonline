@@ -1,13 +1,12 @@
-name: Send Room In Request
- 
-on: 
-  workflow_dispatch: 
+name: Send Room Create Request
+
+on:
+  workflow_dispatch:
 
 jobs:
   send_request:
     runs-on: ubuntu-latest
     env:
-      # Node.js 20の非推奨警告に対応
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Checkout repository
@@ -16,60 +15,53 @@ jobs:
       - name: Execute Script
         shell: bash
         run: |
-          # 1. ターゲットURLからHTMLを取得
-          TARGET_URL="https://writening.net/page?WM2VRT"
-          # -sL で取得し、念のためHTMLタグなどを除去せずそのまま処理
-          HTML_CONTENT=$(curl -sL "$TARGET_URL")
-
-          # 2. 抽出処理の改善
-          # 「・・・」で区切られた部分をより確実に引っこ抜くため、正規表現を調整
-          # 文字列の間に改行やスペースがあっても対応できるようにします
-          CLEAN_TEXT=$(echo "$HTML_CONTENT" | sed 's/<[^>]*>//g' | tr -d '\n\r')
+          # 1. 乱数生成（大きな数値を扱うため shuf を使用）
+          # 0〜99999 の乱数
+          RAND_PLAYER=$(shuf -i 0-99999 -n 1)
+          RAND_ROOM=$(shuf -i 0-99999 -n 1)
           
-          # パターンのマッチング（5つの要素を抽出）
-          PATTERN='.*・・・\(.*\)・・・\(.*\)・・・\(.*\)・・・\(.*\)・・・\(.*\)・・・.*'
-          
-          if [[ ! "$CLEAN_TEXT" =~ ・・・.*・・・.*・・・.*・・・.*・・・.*・・・ ]]; then
-            echo "Error: 指定されたパターン（・・・が6個以上）が見つかりませんでした。"
-            # デバッグ用に取得テキストの一部を表示
-            echo "取得テキストの一部: ${CLEAN_TEXT:0:200}"
-            exit 1
-          fi
+          # 0〜99999999 の乱数
+          RAND_COMMENT=$(shuf -i 0-99999999 -n 1)
 
-          STR1=$(echo "$CLEAN_TEXT" | sed "s/$PATTERN/\1/")
-          STR2=$(echo "$CLEAN_TEXT" | sed "s/$PATTERN/\2/")
-          STR3=$(echo "$CLEAN_TEXT" | sed "s/$PATTERN/\3/")
-          STR4=$(echo "$CLEAN_TEXT" | sed "s/$PATTERN/\4/")
-          STR5=$(echo "$CLEAN_TEXT" | sed "s/$PATTERN/\5/")
+          PLAYER_NAME="ANONYMOUS${RAND_PLAYER}"
+          ROOM_NAME="ANONYMOUS${RAND_ROOM}"
+          COMMENT="【JOIN_THE_ANONYMOUS_ALLIANCE宣戦布告：アドレナリン】${RAND_COMMENT}"
+          ROOM_JOBSET="0-【JOIN_THE_ANONYMOUS_ALLIANCE】"
 
-          # 3. 乱数付与の判定 (STR5が1なら乱数付与)
-          if [ "$STR5" = "1" ]; then
-            RAND_NUM=$(( RANDOM % 999999 ))
-            PLAYER_NAME="${STR1}${RAND_NUM}"
+          # 1/2の確率（0または1）で room_settings の値を切り替え
+          RAND_SETTING=$(shuf -i 0-1 -n 1)
+          if [ "$RAND_SETTING" -eq 0 ]; then
+            # パターンA: "zinro":1
+            ROOM_SETTINGS="%257B%2522yakukakenashi%2522%253A0%252C%2522shufflename%2522%253A0%252C%2522friend%2522%253A0%252C%2522beginner%2522%253A0%252C%2522no_beginner%2522%253A0%252C%2522no_zinro%2522%253A0%252C%2522zinro%2522%253A1%252C%2522revote%2522%253A0%252C%2522whiterandom%2522%253A0%252C%2522sec_night%2522%253Anull%252C%2522sec_vote%2522%253Anull%252C%2522sec_day%2522%253Anull%252C%2522votechat%2522%253A0%252C%2522word_rev%2522%253A0%252C%2522word_gm%2522%253Anull%257D"
           else
-            PLAYER_NAME="${STR1}"
+            # パターンB: "zinro":0
+            ROOM_SETTINGS="%257B%2522yakukakenashi%2522%253A0%252C%2522shufflename%2522%253A0%252C%2522friend%2522%253A0%252C%2522beginner%2522%253A0%252C%2522no_beginner%2522%253A0%252C%2522no_zinro%2522%253A0%252C%2522zinro%2522%253A0%252C%2522revote%2522%253A0%252C%2522whiterandom%2522%253A0%252C%2522sec_night%2522%253Anull%252C%2522sec_vote%2522%253Anull%252C%2522sec_day%2522%253Anull%252C%2522votechat%2522%253A0%252C%2522word_rev%2522%253A0%252C%2522word_gm%2522%253Anull%257D"
           fi
 
-          echo "Debug: STR1=$STR1, STR2=$STR2, STR3=$STR3, STR4=$STR4, STR5=$STR5"
-
-          # 4. URLエンコード関数
+          # 2. URLエンコード関数
           urlencode() {
             python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))" "$1"
           }
 
           ENC_PLAYER=$(urlencode "$PLAYER_NAME")
-          ENC_ROOM=$(urlencode "$STR2")
-          ENC_ROM=$(urlencode "$STR3")
-          ENC_PASS=$(urlencode "$STR4")
+          ENC_ROOM=$(urlencode "$ROOM_NAME")
+          ENC_COMMENT=$(urlencode "$COMMENT")
+          ENC_JOBSET=$(urlencode "$ROOM_JOBSET")
 
-          # 5. リクエストの送信
-          FINAL_URL="https://zinro.net/m/room_in.php?mode=submit&player_name=${ENC_PLAYER}&room_name=${ENC_ROOM}&pass=${ENC_PASS}&rom=${ENC_ROM}&speed=1"
-          COOKIE="session_key=2"
+          # 3. POSTボディの作成
+          POST_DATA="mode=submit&player_name=${ENC_PLAYER}&room_name=${ENC_ROOM}&comment=${ENC_COMMENT}&rule=&no_gm=1&private=0&teiin=20&trip_open=1"
 
-          echo "Requesting: $FINAL_URL"
- 
-          curl -v -X GET "$FINAL_URL" \
+          # 4. Cookieの設定
+          COOKIE="session_key=1; room_settings=${ROOM_SETTINGS}; room_jobset=${ENC_JOBSET}"
+
+          # 5. POSTリクエストの送信
+          TARGET_POST_URL="https://zinro.net/m/room_create.php"
+
+          echo "Posting to: $TARGET_POST_URL"
+          echo "Payload: $POST_DATA"
+
+          curl -v -X POST "$TARGET_POST_URL" \
                -H "Cookie: $COOKIE" \
-               -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-
-
+               -H "Content-Type: application/x-www-form-urlencoded" \
+               -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
+               --data "$POST_DATA"
