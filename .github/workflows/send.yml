@@ -18,8 +18,8 @@ jobs:
           # 1. パラメータの設定
           RAND_NUM=$(( RANDOM % 1000000 ))
           PLAYER_NAME="ジーザス${RAND_NUM}"
-          ROOM_NAME="引き継ぎ。"
-          ROM="1"
+          ROOM_NAME="カオス村"
+          ROM="0"
 
           # 2. session_key の設定 (1に固定)
           SESSION_KEY=123
