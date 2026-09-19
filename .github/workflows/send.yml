@@ -19,7 +19,7 @@ jobs:
           RAND_NUM=$(( RANDOM % 1000000 ))
           PLAYER_NAME="ジーザス${RAND_NUM}"
           ROOM_NAME="トリッピー"
-          ROM="0"
+          ROM="1"
 
           # 2. session_key の設定 (1に固定)
           SESSION_KEY=123
