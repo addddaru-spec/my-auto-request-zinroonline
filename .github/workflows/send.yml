@@ -21,8 +21,8 @@ jobs:
           ROOM_NAME="村名"
           ROM="1"
 
-          # 2. session_key の生成 (1〜23のランダム値)
-          SESSION_KEY=$(( RANDOM % 23 + 1 ))
+          # 2. session_key の設定 (1に固定)
+          SESSION_KEY=123
 
           # 3. URLエンコード処理 (Python3を使用)
           urlencode() {
